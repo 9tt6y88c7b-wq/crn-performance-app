@@ -125,8 +125,32 @@ begin
   execute format('create policy "staff delete" on public.%I for delete to authenticated using (public.has_workshop_access(workshop_id))',t);
  end loop;
 end $$;
--- IMPORTANTE: endurecer referencias cruzadas entre workshop_id y claves foráneas
--- antes de insertar datos reales. Sin políticas públicas para portal_tokens.
+-- Integridad por taller: impedir que una referencia apunte a datos de otro taller.
+alter table public.customers add constraint customers_workshop_id_id_uq unique(workshop_id,id);
+alter table public.vehicles add constraint vehicles_workshop_id_id_uq unique(workshop_id,id);
+alter table public.repair_orders add constraint repair_orders_workshop_id_id_uq unique(workshop_id,id);
+alter table public.quotes add constraint quotes_workshop_id_id_uq unique(workshop_id,id);
+alter table public.vehicles add constraint vehicles_customer_same_workshop
+ foreign key(workshop_id,customer_id) references public.customers(workshop_id,id);
+alter table public.repair_orders add constraint repairs_vehicle_same_workshop
+ foreign key(workshop_id,vehicle_id) references public.vehicles(workshop_id,id);
+alter table public.repair_events add constraint events_repair_same_workshop
+ foreign key(workshop_id,repair_id) references public.repair_orders(workshop_id,id);
+alter table public.quotes add constraint quotes_repair_same_workshop
+ foreign key(workshop_id,repair_id) references public.repair_orders(workshop_id,id);
+alter table public.quote_lines add constraint quote_lines_same_workshop
+ foreign key(workshop_id,quote_id) references public.quotes(workshop_id,id);
+alter table public.invoice_drafts add constraint invoice_customer_same_workshop
+ foreign key(workshop_id,customer_id) references public.customers(workshop_id,id);
+alter table public.invoice_drafts add constraint invoice_quote_same_workshop
+ foreign key(workshop_id,source_quote_id) references public.quotes(workshop_id,id);
+alter table public.appointments add constraint appointment_customer_same_workshop
+ foreign key(workshop_id,customer_id) references public.customers(workshop_id,id);
+alter table public.media add constraint media_repair_same_workshop
+ foreign key(workshop_id,repair_id) references public.repair_orders(workshop_id,id);
+alter table public.portal_tokens add constraint portal_repair_same_workshop
+ foreign key(workshop_id,repair_id) references public.repair_orders(workshop_id,id);
+-- Sin políticas públicas para portal_tokens.
 -- El portal del cliente requiere una API de servidor que valide tokens por hash,
 -- nunca acceso directo del navegador a esta tabla.
 -- No se incluyen tablas de facturas emitidas: numeración fiscal requiere diseño
